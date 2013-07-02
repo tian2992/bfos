@@ -20,6 +20,7 @@ class Grooveshark():
     self.secret = secret
     self.api_host = "http://api.grooveshark.com/ws3.php"
     self.listen_host = "http://grooveshark.com/"
+    self.country = self.getCountry()
 
   def _build_json(self, method, **kwargs):
     payload = {'header': {'wsKey': self.key},
@@ -31,9 +32,35 @@ class Grooveshark():
     #TODO(tian): add json headers, look for more elegant way to sign.
     return requests.post(self.api_host + "?sig="+ sign, data=data)
 
-  def getUserID(self, username):
+  def getCountry(self, ip = None):
+    """
+    Gets the country object. IP is optional.
+    """
+    if (ip):
+      json = self._build_json("getCountry", ip=ip)
+    else:
+      json = self._build_json("getCountry")
+    sign = sign_data(json, self.secret)
+    result = self._do_API_call(json, sign)
+    return result.json()["result"]
+
+  def getUserIDFromUsername(self, username):
     json = self._build_json("getUserIDFromUsername", username = username)
     sign = sign_data(json, self.secret)
     result = self._do_API_call(json, sign)
+    #TODO: handle errors
     return result.json()["result"]["UserID"]
 
+  def getUserPlaylistsByUserID(self, userID, limit=0):
+    json = self._build_json("getUserPlaylistsByUserID", userID = userID, limit=limit)
+    sign = sign_data(json, self.secret)
+    result = self._do_API_call(json, sign)
+    return result
+
+  def getSongSearchResults(self, query, country=None, limit=0, offset=0):
+    if not country:
+      country = self.country
+    json = self._build_json("getSongSearchResults", query=query, country=country)
+    sign = sign_data(json, self.secret)
+    result = self._do_API_call(json, sign)
+    return result.json()["result"]["songs"]
